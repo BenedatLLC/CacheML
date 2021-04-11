@@ -55,15 +55,21 @@ class TestS3File(unittest.TestCase):
 
     def test_read_commits_file_caching(self):
         cache_file = S3File(S3_PATH)
+        ts_orig = timeit_with_range(self, MIN_EXPECTED_FULL_READ_TIME, None,
+                                    read_commits_file, cache_file,
+                                    usecols=[0,2,3,6,7,8], start=START_DATE, end=EFFECTIVE_DATE,
+                                    lower_case=True)
         @self.memory.cache
         def my_read_commits(commits_file, start, end):
             return read_commits_file(commits_file, usecols=[0,2,3,6,7,8], start=start, end=end,
                                      lower_case=True)
         print("**** test_read_commits_file_caching ****")
-        timeit_with_range(self, MIN_EXPECTED_FULL_READ_TIME, None, my_read_commits, cache_file,
-                          START_DATE, EFFECTIVE_DATE)
-        timeit_with_range(self, 0, MAX_CACHE_READ_TIME, my_read_commits, cache_file,
-                          START_DATE, EFFECTIVE_DATE)
+        ts = timeit_with_range(self, MIN_EXPECTED_FULL_READ_TIME, None, my_read_commits, cache_file,
+                               START_DATE, EFFECTIVE_DATE)
+        self.assertTrue(ts.equals(ts_orig))
+        ts = timeit_with_range(self, 0, MAX_CACHE_READ_TIME, my_read_commits, cache_file,
+                               START_DATE, EFFECTIVE_DATE)
+        self.assertTrue(ts.equals(ts_orig))
 
 if __name__ == '__main__':
     unittest.main()

@@ -101,6 +101,11 @@ class TimeSeries:
         self.ascending = None
         self.time_range = None
 
+    def equals(self, other):
+        """Return true if two time series are equal"""
+        return self.df.equals(other.df) and self.ts_column==other.ts_column and self.ascending==other.ascending \
+            and self.time_range==other.time_range
+
     def sort_in_place(self, ascending:bool=True) -> None:
         self.df.sort_values(by=self.ts_column, inplace=True, ascending=ascending)
         self.df.reset_index(drop=True, inplace=True)
