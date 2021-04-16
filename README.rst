@@ -2,7 +2,7 @@
 DML: Direct ML
 ==============
 
-Proof of concept for Direct ML: Run your ML directly on our source data.
+Proof of concept for Direct ML: Run ML directly on your source data.
 The key components are caching, encryption, and aggregation.
 
 Performance Test Results
