@@ -1,9 +1,9 @@
-=================================
-DVL: Dataset Virtualization Layer
-=================================
+==============
+DML: Direct ML
+==============
 
-This is a proof of concept for a dataset virtualization layer. It abstracts away the source
-of a data set and handles both caching and "at rest" encryption.
+Proof of concept for Direct ML: Run your ML directly on our source data.
+The key components are caching, encryption, and aggregation.
 
 Performance Test Results
 ------------------------

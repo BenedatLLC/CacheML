@@ -12,4 +12,6 @@ dependencies:
   - snakemake
   - joblib
   - s3fs
+  - cryptography
+  - click
   - pip
