@@ -65,45 +65,6 @@ class EncryptedFile:
     def close(self):
         self.fileobj.close()
 
-class FindableView:
-    """A class like a memoryview on top of a bytes instance. It is missing most
-    of the memoryview functionality, but provides a find() method, which is needed
-    to implement readline().
-
-    start should point to the start of the readable content, and end to one past the
-    end of the readable content (e.g. as in slicing)"""
-    __slots__=('buf', 'start', 'end', 'size')
-    def __init__(self, buf, start, end):
-        assert end>=start, f"Start was {start}, end was {end}"
-        assert end<=len(buf)
-        self.buf = buf
-        self.start = start
-        self.end=end
-        self.size = end-start
-        #print(f"Findableview(start={self.start}, end={self.end})")
-
-    def find(self, sub):
-        """Find returns an index relative to start, not relative to the start of the buffer.
-        """
-        i =  self.buf.find(sub, self.start, self.end)
-        if i==(-1):
-            return i
-        else:
-            return i - self.start
-
-    def split(self, first_length):
-        """Split this buffer into two parts, where the first part is first_length long and
-        the rest is the remainder of the buffer. The first part is returned as a copy.
-        The buffer is then advanced to point to the rest (it may be zero length).
-        """
-        first = bytes(self.buf[self.start:self.start+first_length])
-        self.start=self.start+first_length
-        self.size = self.end-self.start
-        return first
-
-    def tobytes(self):
-        """Makes a copy of the buffer part that is in range"""
-        return bytes(self.buf[self.start:self.end])
 
 
 class EncryptedReader(EncryptedFile):
@@ -158,7 +119,7 @@ class EncryptedReader(EncryptedFile):
             result = self._split(size)
             return result
         elif self.extra_size > 0:
-            parts.append(self._tobytes())
+            parts.append(self.cleartext[self.extra_start:self.extra_end])
             bytes_ready = self.extra_size
             self.extra_start = self.extra_end = self.extra_size = 0
         else:
@@ -239,7 +200,7 @@ class EncryptedReader(EncryptedFile):
                 return result
             else:
                 # the remainder from last time is not enough, save it to parts to free up buffer
-                parts.append(self._tobytes())
+                parts.append(self.cleartext[self.extra_start:self.extra_end])
                 self.extra_start = self.extra_end = self.extra_size = 0
         while True:
             bytes_read = self.fileobj.readinto(self.ciphertext)
