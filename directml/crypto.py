@@ -71,20 +71,15 @@ class FindableView:
 
     start should point to the start of the readable content, and end to one past the
     end of the readable content (e.g. as in slicing)"""
-    __slots__=('buf', 'start', 'end')
+    __slots__=('buf', 'start', 'end', 'size')
     def __init__(self, buf, start, end):
         assert end>=start, f"Start was {start}, end was {end}"
         assert end<=len(buf)
         self.buf = buf
         self.start = start
         self.end=end
+        self.size = end-start
         #print(f"Findableview(start={self.start}, end={self.end})")
-
-    def __len__(self):
-        return self.end-self.start
-
-    def is_empty(self):
-        return self.end==self.start
 
     def find(self, sub):
         """Find returns an index relative to start, not relative to the start of the buffer.
@@ -100,9 +95,9 @@ class FindableView:
         the rest is the remainder of the buffer. The first part is returned as a copy.
         The buffer is then advanced to point to the rest (it may be zero length).
         """
-        assert first_length<=len(self)
         first = bytes(self.buf[self.start:self.start+first_length])
         self.start=self.start+first_length
+        self.size = self.end-self.start
         return first
 
     def tobytes(self):
@@ -135,15 +130,15 @@ class EncryptedReader(EncryptedFile):
         # and no more will be added.
         parts = []
        # print(f"file position before read: {self.fileobj.tell()}")
-        if size>0 and (self.clearextra is not None) and size<=len(self.clearextra):
+        if size>0 and (self.clearextra is not None) and size<=self.clearextra.size:
             # we can satisfy the request out of the left over from the last call
             result = self.clearextra.split(size)
-            if self.clearextra.is_empty():
+            if self.clearextra.size==0:
                 self.clearextra = None
             return result
         elif self.clearextra is not None:
             parts.append(self.clearextra.tobytes())
-            bytes_ready = len(self.clearextra)
+            bytes_ready = self.clearextra.size
             self.clearextra = None
         else:
             bytes_ready = 0
@@ -219,7 +214,7 @@ class EncryptedReader(EncryptedFile):
             if i>=0:
                 # we can do this entirely from the cleartext
                 result = self.clearextra.split(i+1)
-                if self.clearextra.is_empty():
+                if self.clearextra.size==0:
                     self.clearextra = None
                 #print(f"readline(): was able to get line from clearextra, len was {len(result)}")
                 return result
