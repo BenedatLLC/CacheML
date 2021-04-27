@@ -1,4 +1,4 @@
-name: dvl
+name: directml
 channels:
   - bioconda
   - conda-forge
@@ -12,6 +12,6 @@ dependencies:
   - snakemake
   - joblib
   - s3fs
-  - cryptography
+  - pycryptodome
   - click
   - pip

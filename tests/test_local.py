@@ -3,26 +3,23 @@ import time
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 import sys
-from os.path import exists
+from os.path import exists, abspath, expanduser, dirname
 import shutil
 from pathlib import Path
 import os
 import unittest
+import json
 
 import pandas as pd
 from joblib.memory import Memory
 
 from utils_for_tests import *
 sys.path.append(get_module_path())
-from dvl.cache import LocalFile
+from directml.cache import LocalFile, init_cache, Cache
 
-
-def touch(fpath):
-    assert exists(fpath)
-    print(f"pre-modtime = {os.stat(fpath).st_mtime}")
-    Path(fpath).touch(exist_ok=True)
-    print(f"post-modtime = {os.stat(fpath).st_mtime}")
-
+# If DEBUG is True, we don't clean up the temp directory
+# at the end of the test
+DEBUG=False
 
 
 EFFECTIVE_DATE = datetime.fromisoformat('2021-04-01')
@@ -33,10 +30,46 @@ START_DATE=EFFECTIVE_DATE-relativedelta(years=25)
 MIN_EXPECTED_FULL_READ_TIME=120
 MAX_CACHE_READ_TIME=5
 
+class TestCacheInit(unittest.TestCase):
+    def setUp(self):
+        clear_tempdir()
+        os.mkdir(TEMPDIR)
+
+    def tearDown(self):
+        clear_tempdir(DEBUG)
+
+    def test_init(self):
+        print(f"TEMPDIR={TEMPDIR}")
+        init_cache(get_cache_path(), None, _config_base_dir=TEMPDIR)
+        cfg_dir = join(TEMPDIR, '.dml')
+        cfg_file = join(cfg_dir, 'config')
+        self.assertTrue(exists(cfg_file), f"Missing {cfg_file}")
+        cred_file = join(cfg_dir, 'credentials')
+        self.assertTrue(exists(cred_file))
+        with open(cfg_file, 'r') as f:
+            cfg_data = json.load(f)
+            print(cfg_data)
+        self.assertTrue('cache_dir' in cfg_data)
+        with open(cred_file, 'r') as g:
+            cred_data = json.load(g)
+            print(cred_data)
+        stats = os.stat(cred_file)
+        self.assertEqual(stats.st_mode, 0o100600)
+        self.assertTrue('cache_keys' in cred_data)
+        self.assertTrue('default' in cred_data['cache_keys'])
+
+
 class TestLocalFile(unittest.TestCase):
     def setUp(self):
         clear_cache()
-        self.memory = Memory(get_cache_path(), verbose=0)
+        clear_tempdir()
+        os.mkdir(TEMPDIR)
+        init_cache(get_cache_path(), None, _config_base_dir=TEMPDIR)
+        self.cache = Cache(_config_base_dir=TEMPDIR, verbose=2 if DEBUG else 1)
+
+    def tearDown(self):
+        clear_cache(DEBUG)
+        clear_tempdir(DEBUG)
 
     def test_df_caching(self):
         print("**** test_df_caching ****")
@@ -44,7 +77,7 @@ class TestLocalFile(unittest.TestCase):
         df_orig = timeit_with_range(self,MIN_EXPECTED_FULL_READ_TIME, None, pd.read_csv, get_local_data_file(),
                                     header=0, converters={'commit_author_date':pd.to_datetime}, usecols=[0,2,3,6,7,8])
         cache_file = LocalFile(get_local_data_file())
-        @self.memory.cache
+        @self.cache.cache
         def my_read_csv(cache_file, usecols):
             return pd.read_csv(cache_file.path, header=0, converters={'commit_author_date':pd.to_datetime},
                                usecols=usecols)
@@ -58,7 +91,7 @@ class TestLocalFile(unittest.TestCase):
 
     def test_read_commits_file_caching(self):
         cache_file = LocalFile(get_local_data_file())
-        @self.memory.cache
+        @self.cache.cache
         def my_read_commits(commits_file, start, end):
             return read_commits_file(commits_file, usecols=[0,2,3,6,7,8], start=start, end=end,
                                      lower_case=True)

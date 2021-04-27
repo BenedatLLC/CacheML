@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import time
+import os
 from os.path import dirname, abspath, expanduser, join, exists
 import shutil
 from typing import Optional, List
 from datetime import datetime
 import pandas as pd
 import pandas.core.dtypes
+from pathlib import Path
 
 def timeit(f, *args, **kwargs):
     st = time.time()
@@ -35,14 +37,37 @@ def get_module_path():
 def get_cache_path():
     return join(get_module_path(), 'test_cache')
 
+TEMPDIR = join(abspath(expanduser(dirname(__file__))), 'test_temp')
 
-def clear_cache():
+
+def clear_cache(DEBUG=False):
     cpath = get_cache_path()
     if exists(cpath):
-        shutil.rmtree(cpath)
+        if not DEBUG:
+            shutil.rmtree(cpath)
+        else:
+            print(f"Skipping clear of cache at {cpath}, as DEBUG is True")
+
+def clear_tempdir(DEBUG=False):
+    if exists(TEMPDIR):
+        if not DEBUG:
+            shutil.rmtree(TEMPDIR)
+        else:
+            print(f"Skipping removal of TEMPDIR at {TEMPDIR}, as DEBUG is True")
 
 def get_local_data_file():
     return join(get_module_path(), 'test_data/commits.csv.gz')
+
+def get_small_local_data_file():
+    return join(get_module_path(), 'test_data/small.csv.gz')
+
+
+def touch(fpath):
+    assert exists(fpath)
+    print(f"pre-modtime = {os.stat(fpath).st_mtime}")
+    Path(fpath).touch(exist_ok=True)
+    print(f"post-modtime = {os.stat(fpath).st_mtime}")
+
 
 # Code from git_analytics_tools.
 # We include here to prevent circular dependencies
