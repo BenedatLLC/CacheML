@@ -107,7 +107,8 @@ class FindableView:
 
 
 class EncryptedReader(EncryptedFile):
-    __slots__ = ('ciphertext', 'cipherview', 'cleartext', 'clearview', 'clearextra')
+    __slots__ = ('ciphertext', 'cipherview', 'cleartext', 'clearview',
+                 'extra_start', 'extra_end', 'extra_size')
     def __init__(self, filename, mode, key, buf_size):
         assert mode.startswith('r')
         super().__init__(filename, mode, key, buf_size)
@@ -116,32 +117,50 @@ class EncryptedReader(EncryptedFile):
         self.cleartext = bytearray(buf_size)
         self.clearview = memoryview(self.cleartext)
         # If there is extra in the buffer at the end of a call,
-        # we track it with a subview of clearview. This needs to be
-        # checked in the next call.
-        self.clearextra = None
+        # we track it with a start pointer, end pointer, and size.
+        # This must be checked in the next call
+        self.extra_start = self.extra_end = self.extra_size = 0
+
+    def _find(self, sub):
+        """Find returns an index relative to extra_start, not relative to the start of the buffer.
+        """
+        i =  self.cleartext.find(sub, self.extra_start, self.extra_end)
+        if i==(-1):
+            return -1
+        else:
+            return i - self.extra_start
+
+    def _split(self, first_length):
+        """Split this buffer into two parts, where the first part is first_length long and
+        the rest is the remainder of the buffer. The first part is returned as a copy.
+        The buffer is then advanced to point to the rest (it may be zero length).
+        """
+        new_start = self.extra_start + first_length
+        first = bytes(self.cleartext[self.extra_start:new_start])
+        self.extra_start=new_start
+        self.extra_size = self.extra_end-new_start
+        return first
+
+    def _tobytes(self):
+        """Makes a copy of the buffer part that is in range"""
+        return bytes(self.cleartext[self.extra_start:self.extra_end])
+
 
     def read(self, size=(-1)):
-        # if self.clearextra is not None:
-        #     print(f"call to read: read(size={size}), clear_extra={len(self.clearextra)} bytes")
-        # else:
-        #     print(f"call to read: read(size={size}), clear_extra=None")
-
         # Parts is used when we need to combine the results from multiple
         # reads. The elements should always be a copied bytearray (vs. a view
         # into the cleartext buffer), unless it is the last element of multiple
         # and no more will be added.
         parts = []
        # print(f"file position before read: {self.fileobj.tell()}")
-        if size>0 and (self.clearextra is not None) and size<=self.clearextra.size:
+        if size>0 and (self.extra_size > 0) and size<=self.extra_size:
             # we can satisfy the request out of the left over from the last call
-            result = self.clearextra.split(size)
-            if self.clearextra.size==0:
-                self.clearextra = None
+            result = self._split(size)
             return result
-        elif self.clearextra is not None:
-            parts.append(self.clearextra.tobytes())
-            bytes_ready = self.clearextra.size
-            self.clearextra = None
+        elif self.extra_size > 0:
+            parts.append(self._tobytes())
+            bytes_ready = self.extra_size
+            self.extra_start = self.extra_end = self.extra_size = 0
         else:
             bytes_ready = 0
         if size==(-1):
@@ -185,22 +204,23 @@ class EncryptedReader(EncryptedFile):
                 extra_bytes = bytes_ready-size
                 bytes_to_return = bytes_read - extra_bytes
                 parts.append(self.clearview[0:bytes_to_return])
-                self.clearextra = FindableView(self.cleartext, bytes_to_return, bytes_read)
+                self.extra_start = bytes_to_return
+                self.extra_end = bytes_read
+                self.extra_size = bytes_read - bytes_to_return
                 if len(parts)>1:
                     r =  b''.join(parts)
-                    #print(f"returning {len(r)} bytes")
                     return r
                 else:
                     return parts[0].tobytes()
             else:
                 assert bytes_ready<size
                 parts.append(bytes(self.cleartext[0:bytes_read]))
-                assert self.clearextra is None
+                assert self.extra_size==0
             # need to do another read
 
     def readline(self, size=(-1)):
         assert size==(-1), f"currently do not suport readline with a size (size was {size})"
-        # if self.clearextra is not None:
+        # if self.extra_size > 0:
         #     print(f"call to readline(): clear_extra={len(self.clearextra)} bytes")
         # else:
         #     print("call to readline(): clear_extra=None")
@@ -211,19 +231,16 @@ class EncryptedReader(EncryptedFile):
         # and no more will be added.
         parts = []
 
-        if self.clearextra is not None:
-            i = self.clearextra.find(b'\n')
+        if self.extra_size > 0:
+            i = self._find(b'\n')
             if i>=0:
                 # we can do this entirely from the cleartext
-                result = self.clearextra.split(i+1)
-                if self.clearextra.size==0:
-                    self.clearextra = None
-                #print(f"readline(): was able to get line from clearextra, len was {len(result)}")
+                result = self._split(i+1)
                 return result
             else:
                 # the remainder from last time is not enough, save it to parts to free up buffer
-                parts.append(self.clearextra.tobytes())
-                self.clearextra = None
+                parts.append(self._tobytes())
+                self.extra_start = self.extra_end = self.extra_size = 0
         while True:
             bytes_read = self.fileobj.readinto(self.ciphertext)
             #print(f"read {bytes_read} bytes of ciphertext (buf_size was {self.buf_size})")
@@ -246,9 +263,11 @@ class EncryptedReader(EncryptedFile):
             else:
                 slice = self.cleartext[0:i+1]
                 if bytes_read>(i+1):
-                    self.clearextra = FindableView(self.cleartext, i+1, bytes_read)
+                    self.extra_start = i+1
+                    self.extra_end = bytes_read
+                    self.extra_size = self.extra_end - self.extra_start
                 else:
-                    self.clearextra = None
+                    self.extra_start = self.extra_end = self.extra_size = 0
                 if len(parts)>0:
                     parts.append(slice)
                     line =b''.join(parts)
@@ -264,13 +283,13 @@ class EncryptedReader(EncryptedFile):
         assert offset==0 and whence==0, f"Unexpected parameters for seek: (offset={offset}, whence={whence})"
         print(f"seek({offset}, {whence})")
         self._reset_crypto()
-        self.clearextra = None
+        self.extra_start = self.extra_end = self.extra_size = 0
         return self.fileobj.seek(offset, whence)
 
     def close(self):
         super().close()
         # release buffers asap
-        self.cipherview = self.clearview = self.clearextra = None
+        self.cipherview = self.clearview = None
         self.ciphertext = self.cleartext = None
 
 
