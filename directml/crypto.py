@@ -49,6 +49,7 @@ def _get_nonce(filepath):
 
 
 class EncryptedFile:
+    __slots__ = ('filename', 'key', 'mode', 'buf_size', 'nonce', 'cipher', 'fileobj')
     def __init__(self, filename, mode, key, buf_size):
         self.filename = filename
         self.key = key
@@ -106,6 +107,7 @@ class FindableView:
 
 
 class EncryptedReader(EncryptedFile):
+    __slots__ = ('ciphertext', 'cipherview', 'cleartext', 'clearview', 'clearextra')
     def __init__(self, filename, mode, key, buf_size):
         assert mode.startswith('r')
         super().__init__(filename, mode, key, buf_size)
@@ -277,6 +279,7 @@ class EncryptedReader(EncryptedFile):
 class EncryptedWriter(EncryptedFile):
     """We buffer the data as cleartext and then translate a buffer at a time
     as we write the buffers out"""
+    __slots__ = ('cleartext', 'clearview', 'bytes_in_buf', 'ciphertext')
     def __init__(self, filename, mode, key, buf_size):
         assert mode.startswith('w')
         super().__init__(filename, mode, key, buf_size=buf_size)
@@ -324,6 +327,7 @@ class EncryptedWriterNoClearBuf(EncryptedFile):
     """Encrypted writer with no buffering of cleartext - it immediately encrypts the
     write data and stores the encrypted text in a buffer.
     """
+    __slots__ = ('ciphertext', 'cipherview', 'bytes_written')
     def __init__(self, filename, mode, key, buf_size):
         assert mode.startswith('w')
         super().__init__(filename, mode, key, buf_size=buf_size)
