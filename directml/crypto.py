@@ -83,6 +83,9 @@ class FindableView:
     def __len__(self):
         return self.end-self.start
 
+    def is_empty(self):
+        return self.end==self.start
+
     def find(self, sub):
         """Find returns an index relative to start, not relative to the start of the buffer.
         """
@@ -135,7 +138,7 @@ class EncryptedReader(EncryptedFile):
         if size>0 and (self.clearextra is not None) and size<=len(self.clearextra):
             # we can satisfy the request out of the left over from the last call
             result = self.clearextra.split(size)
-            if len(self.clearextra)==0:
+            if self.clearextra.is_empty():
                 self.clearextra = None
             return result
         elif self.clearextra is not None:
@@ -216,7 +219,7 @@ class EncryptedReader(EncryptedFile):
             if i>=0:
                 # we can do this entirely from the cleartext
                 result = self.clearextra.split(i+1)
-                if len(self.clearextra)==0:
+                if self.clearextra.is_empty():
                     self.clearextra = None
                 #print(f"readline(): was able to get line from clearextra, len was {len(result)}")
                 return result
