@@ -82,30 +82,18 @@ class EncryptedReader(EncryptedFile):
         # This must be checked in the next call
         self.extra_start = self.extra_end = self.extra_size = 0
 
-    def _find(self, sub):
-        """Find returns an index relative to extra_start, not relative to the start of the buffer.
-        """
-        i =  self.cleartext.find(sub, self.extra_start, self.extra_end)
-        if i==(-1):
-            return -1
-        else:
-            return i - self.extra_start
-
     def _split(self, first_length):
         """Split this buffer into two parts, where the first part is first_length long and
         the rest is the remainder of the buffer. The first part is returned as a copy.
         The buffer is then advanced to point to the rest (it may be zero length).
         """
         new_start = self.extra_start + first_length
+        # need to wrap in a bytes here, as the calling pickle expects a bytes, not a bytearray
+        # This is unfortunate, as it already is doing a copy.
         first = bytes(self.cleartext[self.extra_start:new_start])
         self.extra_start=new_start
         self.extra_size = self.extra_end-new_start
         return first
-
-    def _tobytes(self):
-        """Makes a copy of the buffer part that is in range"""
-        return bytes(self.cleartext[self.extra_start:self.extra_end])
-
 
     def read(self, size=(-1)):
         # Parts is used when we need to combine the results from multiple
@@ -193,10 +181,10 @@ class EncryptedReader(EncryptedFile):
         parts = []
 
         if self.extra_size > 0:
-            i = self._find(b'\n')
+            i = self.cleartext.find(b'\n', self.extra_start, self.extra_end)
             if i>=0:
                 # we can do this entirely from the cleartext
-                result = self._split(i+1)
+                result = self._split(i+1-self.extra_start)
                 return result
             else:
                 # the remainder from last time is not enough, save it to parts to free up buffer
