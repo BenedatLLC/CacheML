@@ -104,8 +104,7 @@ class EncryptedReader(EncryptedFile):
        # print(f"file position before read: {self.fileobj.tell()}")
         if size>0 and (self.extra_size > 0) and size<=self.extra_size:
             # we can satisfy the request out of the left over from the last call
-            result = self._split(size)
-            return result
+            return self._split(size)
         elif self.extra_size > 0:
             parts.append(self.cleartext[self.extra_start:self.extra_end])
             bytes_ready = self.extra_size
@@ -121,7 +120,7 @@ class EncryptedReader(EncryptedFile):
                 parts.append(self.cipher.decrypt(ciphercontents))
                 return b''.join(parts)
             else:
-                return self.ciphter.decrypt(ciphercontents)
+                return self.cipher.decrypt(ciphercontents)
         # if we get here, we are reading into the buffers
         #print(f"entering loop, bytes_ready={bytes_ready}")
         while True:
@@ -181,15 +180,13 @@ class EncryptedReader(EncryptedFile):
             i = self.cleartext.find(b'\n', self.extra_start, self.extra_end)
             if i>=0:
                 # we can do this entirely from the cleartext
-                result = self._split(i+1-self.extra_start)
-                return result
+                return self._split(i+1-self.extra_start)
             else:
                 # the remainder from last time is not enough, save it to parts to free up buffer
                 parts.append(self.cleartext[self.extra_start:self.extra_end])
                 self.extra_start = self.extra_end = self.extra_size = 0
         while True:
             bytes_read = self.fileobj.readinto(self.ciphertext)
-            #print(f"read {bytes_read} bytes of ciphertext (buf_size was {self.buf_size})")
             if bytes_read==0:
                 if len(parts)>1:
                     #print(f"line consists of {len(parts)} parts")
@@ -227,7 +224,6 @@ class EncryptedReader(EncryptedFile):
         In that case, we also have to reset the decryption cipher state.
         """
         assert offset==0 and whence==0, f"Unexpected parameters for seek: (offset={offset}, whence={whence})"
-        print(f"seek({offset}, {whence})")
         self._reset_crypto()
         self.extra_start = self.extra_end = self.extra_size = 0
         return self.fileobj.seek(offset, whence)
