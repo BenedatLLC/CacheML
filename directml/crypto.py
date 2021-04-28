@@ -117,23 +117,20 @@ class EncryptedReader(EncryptedFile):
             # No point using our buffers, as we don't know the expect
             # size and the decrypted data must be returned as a copy.
             ciphercontents = self.fileobj.read(-1)
-            parts.append(self.cipher.decrypt(ciphercontents))
-            if len(parts)>1:
+            if len(parts)>0:
+                parts.append(self.cipher.decrypt(ciphercontents))
                 return b''.join(parts)
             else:
-                return parts[0]
+                return self.ciphter.decrypt(ciphercontents)
         # if we get here, we are reading into the buffers
         #print(f"entering loop, bytes_ready={bytes_ready}")
         while True:
             bytes_read = self.fileobj.readinto(self.ciphertext)
-            #print(f"read {bytes_read} bytes of ciphertext (buf_size was {self.buf_size})")
             if bytes_read==0: # got to end of file
                 if len(parts)>1:
-                    #print(f"read consists of {len(parts)} parts")
                     return b''.join(parts)
                 elif len(parts)==1:
-                    #print(f"return orphan part of length {len(parts[0])}")
-                    return parts[0]
+                    return parts[0] if isinstance(parts[0], bytes) else bytes(parts[0])
                 else:
                     return bytes()
             # based on the api, the decrypted bytes always
@@ -144,8 +141,8 @@ class EncryptedReader(EncryptedFile):
             bytes_ready += bytes_read
             #print(f"bytes_read = {bytes_read}, bytes_ready now is {bytes_ready}")
             if bytes_ready==size:
-                parts.append(decrypted_view)
-                if len(parts)>1:
+                if len(parts)>0:
+                    parts.append(decrypted_view)
                     return b''.join(parts)
                 else:
                     return decrypted_view.tobytes()
