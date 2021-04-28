@@ -14,7 +14,7 @@ from joblib.memory import Memory
 
 from utils_for_tests import *
 sys.path.append(get_module_path())
-from dvl.cache import S3File
+from directml.cache import S3File
 
 S3_PATH="s3://benedat-cache-test/commits.csv.gz"
 

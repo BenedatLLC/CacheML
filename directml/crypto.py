@@ -104,7 +104,13 @@ class EncryptedReader(EncryptedFile):
        # print(f"file position before read: {self.fileobj.tell()}")
         if size>0 and (self.extra_size > 0) and size<=self.extra_size:
             # we can satisfy the request out of the left over from the last call
-            return self._split(size)
+            new_start = self.extra_start + size
+            # need to wrap in a bytes here, as the calling pickle expects a bytes, not a bytearray
+            # This is unfortunate, as it already is doing a copy.
+            first = bytes(self.cleartext[self.extra_start:new_start])
+            self.extra_start=new_start
+            self.extra_size = self.extra_end-new_start
+            return first
         elif self.extra_size > 0:
             parts.append(self.cleartext[self.extra_start:self.extra_end])
             bytes_ready = self.extra_size
@@ -180,7 +186,13 @@ class EncryptedReader(EncryptedFile):
             i = self.cleartext.find(b'\n', self.extra_start, self.extra_end)
             if i>=0:
                 # we can do this entirely from the cleartext
-                return self._split(i+1-self.extra_start)
+                new_start = i+1
+                # need to wrap in a bytes here, as the calling pickle expects a bytes, not a bytearray
+                # This is unfortunate, as it already is doing a copy.
+                first = bytes(self.cleartext[self.extra_start:new_start])
+                self.extra_start=new_start
+                self.extra_size = self.extra_end-new_start
+                return first
             else:
                 # the remainder from last time is not enough, save it to parts to free up buffer
                 parts.append(self.cleartext[self.extra_start:self.extra_end])

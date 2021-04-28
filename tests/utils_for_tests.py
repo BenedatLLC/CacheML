@@ -27,6 +27,14 @@ def timeit_with_range(self, min_time_secs, max_time_secs, f, *args, **kwargs):
         self.assertLessEqual(elapsed, max_time_secs)
     return rv
 
+def fmt_time(start_time):
+    """Format the time since the start time in either seconds or milliseconds"""
+    elapsed = time.time() - start_time
+    if elapsed < 1.0:
+        return f"{round(1000*elapsed,1)} milliseconds"
+    else:
+        return f"{round(elapsed, 1)} seconds"
+
 
 def get_this_dir():
     return abspath(expanduser(dirname(__file__)))
@@ -67,6 +75,7 @@ def touch(fpath):
     print(f"pre-modtime = {os.stat(fpath).st_mtime}")
     Path(fpath).touch(exist_ok=True)
     print(f"post-modtime = {os.stat(fpath).st_mtime}")
+
 
 
 # Code from git_analytics_tools.
