@@ -13,7 +13,7 @@ TAG=$(shell python3 -c "import cacheml; print(cacheml.__version__)")
 
 # don't run tag directly, use this target
 pkg-upload: pkg-build pkg-tag
-	cd $(DWS_DIR); python3 -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+	python3 -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
 
 pkg-tag:
 	@echo "Tagging with $(TAG)"
