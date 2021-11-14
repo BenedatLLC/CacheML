@@ -2,7 +2,8 @@
 Cache ML
 ========
 
-Cache ML -- layer on top of joblib to cache parsed datasets, dramatically reducing load
+Cache ML -- layer on top of `joblib <https://joblib.readthedocs.io/en/latest/>`_ to cache parsed datasets,
+dramatically reducing load
 time of large data files. Also supports encryption at rest. Currently supported backends
 are local filesystem and S3.
 
