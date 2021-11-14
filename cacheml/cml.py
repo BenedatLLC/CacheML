@@ -1,7 +1,10 @@
 #!/usr/bin/env  python3
 """
 Command line tool for Cache ML
+This is not finished yet!
 """
+# Copyright 2021 Benedat LLC
+# Apache 2.0 license
 
 __all__ = ["cli"]
 import sys

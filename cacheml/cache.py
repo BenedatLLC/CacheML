@@ -1,6 +1,9 @@
 """
 Caching functions and decorators
+
 """
+# Copyright 2021 Benedat LLC
+# Apache 2.0 license
 
 import time
 import os

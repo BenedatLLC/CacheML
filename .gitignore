@@ -1,3 +1,5 @@
 /test_data
 /test_cache
 __pycache__
+/CacheML.egg-info/
+/dist/

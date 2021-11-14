@@ -13,7 +13,7 @@ Here is an example from a Jupyter notebook::
   import pandas as pd
   from cacheml.cache import LocalFile, Cache
   cache = Cache()
-  @cache.cache # this function's resule will be cached
+  @cache.cache # this function's result will be cached
   def read_and_filter_commits(commits_file_obj):
       return pd.read_csv(commits_file_obj.path)
   ts_all = read_and_filter_commits(LocalFile(commits.csv.gz))
