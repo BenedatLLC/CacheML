@@ -1,9 +1,22 @@
-==============
-DML: Direct ML
-==============
+========
+Cache ML
+========
 
-Proof of concept for Direct ML: Run ML directly on your source data.
-The key components are caching, encryption, and aggregation.
+Cache ML -- layer on top of joblib to cache parsed datasets, dramatically reducing load
+time of large data files. Also supports encryption at rest. Currently supported backends
+are local filesystem and S3.
+
+Example Usage
+-------------
+Here is an example from a Jupyter notebook::
+
+  import pandas as pd
+  from cacheml.cache import LocalFile, Cache
+  cache = Cache()
+  @cache.cache # this function's resule will be cached
+  def read_and_filter_commits(commits_file_obj):
+      return pd.read_csv(commits_file_obj.path)
+  ts_all = read_and_filter_commits(LocalFile(commits.csv.gz))
 
 Performance Test Results
 ------------------------
@@ -44,5 +57,7 @@ entries outside a time range).
      - 155.8
      - 0.99
 
-
+Copyright
+---------
+Copyright 2021 by Benedat LLC. Available under the Apache 2.0 license.
 

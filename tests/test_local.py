@@ -15,7 +15,7 @@ from joblib.memory import Memory
 
 from utils_for_tests import *
 sys.path.append(get_module_path())
-from directml.cache import LocalFile, init_cache, Cache
+from cacheml.cache import LocalFile, init_cache, Cache
 
 # If DEBUG is True, we don't clean up the temp directory
 # at the end of the test

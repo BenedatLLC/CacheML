@@ -1,6 +1,6 @@
 #!/usr/bin/env  python3
 """
-Command line tool for Direct ML
+Command line tool for Cache ML
 """
 
 __all__ = ["cli"]

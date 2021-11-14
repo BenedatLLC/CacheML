@@ -11,7 +11,7 @@ import joblib
 
 from utils_for_tests import *
 sys.path.append(get_module_path())
-from directml.crypto import *
+from cacheml.crypto import *
 
 KEY=get_new_key()
 

@@ -11,8 +11,8 @@ import numpy as np
 
 from utils_for_tests import *
 sys.path.append(get_module_path())
-from directml.crypto import get_new_key, encrypted_file_open
-from directml.cache import LocalFile, init_cache, Cache
+from cacheml.crypto import get_new_key, encrypted_file_open
+from cacheml.cache import LocalFile, init_cache, Cache
 
 DEBUG=False
 
