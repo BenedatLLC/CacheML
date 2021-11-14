@@ -7,6 +7,12 @@ dramatically reducing load
 time of large data files. Also supports encryption at rest. Currently supported backends
 are local filesystem and S3.
 
+Installation
+------------
+You can install via ``pip``::
+
+  pip install cacheml
+
 Example Usage
 -------------
 Here is an example from a Jupyter notebook::
